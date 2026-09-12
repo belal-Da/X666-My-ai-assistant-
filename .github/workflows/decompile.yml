@@ -1,14 +1,10 @@
-name: Decompile Zara APK
+name: Build Patched Zara APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'Zara-1.0.apk'
 
 jobs:
-  decompile:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,25 +15,48 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install apktool
+      - name: Install apktool + build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y apktool
+          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" > /dev/null 2>&1 || true
 
-      - name: Decompile APK to Smali + resources
+      - name: Decompile original APK
         run: |
           apktool d Zara-1.0.apk -o decompiled -f
 
-      - name: Show top-level structure
+      - name: Apply patch(es)
         run: |
-          find decompiled -maxdepth 2 -type d | sort
+          cp patches/AgentThinker.smali decompiled/smali_classes4/com/myzara/zara/automation/AgentThinker.smali
+          echo "Patched AgentThinker.smali"
 
-      - name: Zip the decompiled output
+      - name: Rebuild APK
         run: |
-          cd decompiled && zip -r ../zara-decompiled.zip . && cd ..
+          apktool b decompiled -o zara-unsigned.apk
 
-      - name: Upload decompiled source as artifact
+      - name: Generate a debug signing key
+        run: |
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey \
+            -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Debug,O=Debug,C=US"
+
+      - name: Find build-tools path
+        id: bt
+        run: |
+          BT=$(find $ANDROID_HOME/build-tools -maxdepth 1 -type d | sort -V | tail -1)
+          echo "path=$BT" >> $GITHUB_OUTPUT
+
+      - name: Zipalign
+        run: |
+          ${{ steps.bt.outputs.path }}/zipalign -f -p 4 zara-unsigned.apk zara-aligned.apk
+
+      - name: Sign the APK
+        run: |
+          ${{ steps.bt.outputs.path }}/apksigner sign --ks debug.keystore --ks-pass pass:android \
+            --key-pass pass:android --out Zara-patched-signed.apk zara-aligned.apk
+
+      - name: Upload signed patched APK
         uses: actions/upload-artifact@v4
         with:
-          name: zara-decompiled
-          path: zara-decompiled.zip
+          name: zara-patched-signed-apk
+          path: Zara-patched-signed.apk
