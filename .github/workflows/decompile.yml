@@ -27,7 +27,11 @@ jobs:
       - name: Apply patch(es)
         run: |
           cp patches/AgentThinker.smali decompiled/smali_classes4/com/myzara/zara/automation/AgentThinker.smali
-          echo "Patched AgentThinker.smali"
+          cp patches/live/GeminiLiveClient.smali decompiled/smali_classes11/com/myzara/zara/live/GeminiLiveClient.smali
+          cp patches/res/values/strings.xml decompiled/res/values/strings.xml
+          cp patches/res/drawable/ic_launcher_background.xml decompiled/res/drawable/ic_launcher_background.xml
+          cp patches/res/drawable/ic_launcher_foreground.xml decompiled/res/drawable/ic_launcher_foreground.xml
+          echo "Applied 5 patches: text-command prompt fix, live-voice prompt fix, app rename, new logo"
 
       - name: Rebuild APK (using aapt2 bundled in apktool)
         run: |
