@@ -15,24 +15,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install apktool + build tools
+      - name: Download apktool (official GitHub release, bundles aapt2)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y apktool
-          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" > /dev/null 2>&1 || true
+          wget -q https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar -O apktool.jar
+          ls -la apktool.jar
 
       - name: Decompile original APK
         run: |
-          apktool d Zara-1.0.apk -o decompiled -f
+          java -jar apktool.jar d Zara-1.0.apk -o decompiled -f
 
       - name: Apply patch(es)
         run: |
           cp patches/AgentThinker.smali decompiled/smali_classes4/com/myzara/zara/automation/AgentThinker.smali
           echo "Patched AgentThinker.smali"
 
-      - name: Rebuild APK
+      - name: Rebuild APK (using aapt2 bundled in apktool)
         run: |
-          apktool b decompiled -o zara-unsigned.apk
+          java -jar apktool.jar b decompiled -o zara-unsigned.apk --use-aapt2
 
       - name: Generate a debug signing key
         run: |
@@ -45,6 +44,7 @@ jobs:
         run: |
           BT=$(find $ANDROID_HOME/build-tools -maxdepth 1 -type d | sort -V | tail -1)
           echo "path=$BT" >> $GITHUB_OUTPUT
+          echo "Using build-tools at $BT"
 
       - name: Zipalign
         run: |
