@@ -31,7 +31,10 @@ jobs:
           cp patches/res/values/strings.xml decompiled/res/values/strings.xml
           cp patches/res/drawable/ic_launcher_background.xml decompiled/res/drawable/ic_launcher_background.xml
           cp patches/res/drawable/ic_launcher_foreground.xml decompiled/res/drawable/ic_launcher_foreground.xml
-          echo "Applied 5 patches: text-command prompt fix, live-voice prompt fix, app rename, new logo"
+          cp patches/res/xml/accessibility_service_config.xml decompiled/res/xml/accessibility_service_config.xml
+          rm -f decompiled/res/drawable/\$ic_launcher_background__*.xml
+          rm -f decompiled/res/drawable/\$ic_launcher_foreground__*.xml
+          echo "Applied 5 patches and removed stale generated icon sub-resources"
 
       - name: Rebuild APK (using aapt2 bundled in apktool)
         run: |
